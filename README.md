@@ -1,154 +1,91 @@
 # RetroSynth
 
-Single-step retrosynthesis benchmark for evaluating AI agents' ability to propose reactants that produce a target molecule.
+[![OpenReward Environment](https://img.shields.io/badge/%E2%AD%90%20OpenReward-Environment-f7e6cc)](https://openreward.ai/GeneralReasoning/RetroSynth)
 
-## Overview
+## Description
 
-Given a target molecule's SMILES notation, agents must identify and propose the reactants that would synthesize it in a single reaction step. This task evaluates chemistry reasoning and knowledge of organic synthesis.
+**RetroSynth** is an environment for evaluating agents on single-step retrosynthesis tasks. Given a target molecule's SMILES notation, agents must propose the reactants that would produce it in a single synthetic step. The dataset is derived from the [USPTO-50k](https://tdcommons.ai/generation_tasks/retrosyn/) reaction dataset, filtered for commercially plausible reagents.
 
-**Data Source:** USPTO-50k reaction dataset (via Therapeutics Data Commons)
+## Capabilities
 
-## Task Format
+- Proposing reactant sets for single-step retrosynthesis
+- Reasoning about organic synthesis reactions and reaction mechanisms
+- Understanding structure-reactivity relationships in organic chemistry
+- Working with SMILES notation for molecular representation
 
-- **Input:** Target molecule SMILES + number of expected reactants
-- **Output:** Proposed reactants as dot-separated SMILES (e.g., `CCO.CC(=O)Cl`)
-- **Tool:** `submit_reactants`
+## Compute Requirements
 
-### Example Task
+RetroSynth does not require a sandbox. It has minimal compute requirements.
 
-```json
-{
-  "task_id": "retro_test_0000",
-  "target_smiles": "Cc1ccc2cc(CN3CCN(c4ccccn4)CC3)ccc2c1",
-  "num_heavy_atoms": 24,
-  "num_reactants": 2
+## License
+
+[MIT](https://opensource.org/license/mit).
+
+## Tasks
+
+There are two splits: train (1,000 tasks) and test (100 tasks), totaling 1,100 tasks. Each task presents a target molecule SMILES string and asks the agent to propose the reactants as dot-separated SMILES (e.g., `CCO.CC(=O)Cl`).
+
+Tasks are filtered from [USPTO-50k](https://tdcommons.ai/generation_tasks/retrosyn/) for commercial plausibility:
+- Allowed elements: C, N, O, F, P, S, Cl, Br, I, B, Si, H
+- Reactant constraints: <= 30 heavy atoms, <= 3 rings per reactant
+- Product constraints: 5-100 heavy atoms
+- Reactant distribution: ~75% two-reactant, ~25% single-reactant reactions
+
+## Reward Structure
+
+This is a sparse, verifiable reward environment. The agent calls `submit_reactants` once with proposed reactants, and the reward is computed as follows:
+
+- **Exact match**: Reward **1.0** if the canonical SMILES of submitted reactants exactly match the ground truth.
+- **Partial match**: Reward is the Tanimoto similarity (Morgan fingerprints, radius 2, 2048 bits) between the combined fingerprints of submitted and ground truth reactants, capped at **0.95**.
+- **Invalid SMILES**: Reward **0.0**.
+
+We do not use LLM graders for this task.
+
+## Data
+
+Tasks are derived from the [USPTO-50k](https://tdcommons.ai/generation_tasks/retrosyn/) reaction dataset (via [Therapeutics Data Commons](https://tdcommons.ai/)), filtered for commercially plausible reagents. Data files are stored on the OpenReward platform.
+
+## Tools
+
+Agents are given a single tool:
+
+- `submit_reactants`: Submit proposed reactants as dot-separated SMILES (e.g., `CCO.CC(=O)Cl`). Returns the reward based on fingerprint similarity to ground truth. This tool can only be called once per task.
+
+## Time Horizon
+
+RetroSynth is a single-turn environment. The agent receives a target molecule and submits one set of proposed reactants. Each task requires exactly one tool call.
+
+## Environment Difficulty
+
+Task difficulty varies based on molecular complexity. Products range from 8 to 49 heavy atoms, with larger molecules typically requiring more sophisticated retrosynthetic reasoning. Tasks include both single-reactant transformations (functional group interconversions, ~25%) and multi-reactant reactions (coupling, amide formation, etc., ~75%).
+
+## Other Environment Requirements
+
+There are no further environment requirements; RetroSynth works out of the box with the OpenReward endpoint.
+
+## Safety
+
+Agents in RetroSynth are asked to propose chemical reactants for synthesis tasks. The environment does not present direct safety risks, as agents only provide SMILES strings evaluated computationally, with no access to external systems or real chemical processes.
+
+However, this is a dual-use domain as capabilities learnt in this environment could be used for malicious purposes when combined with other agentic workflows.
+
+## Citations
+
+```bibtex
+@dataset{GRRetroSynth,
+  author    = {General Reasoning Inc. Team},
+  title     = {RetroSynth},
+  year      = {2026},
+  publisher = {OpenReward},
+  url       = {https://openreward.ai/GeneralReasoning/RetroSynth}
 }
 ```
 
-**Ground truth reactants:** `Cc1ccc2cc(CCl)ccc2c1.c1ccc(N2CCNCC2)nc1`
-
-## Dataset Statistics
-
-| Split | Tasks |
-|-------|-------|
-| Train | 1,000 |
-| Test  | 100   |
-| **Total** | **1,100** |
-
-### Reactant Distribution
-
-| Reactants | Tasks | Percentage |
-|-----------|-------|------------|
-| 1 | 274 | 25% |
-| 2 | 823 | 75% |
-| 3 | 3 | 0.3% |
-
-### Molecule Complexity
-
-- **Heavy atoms:** 8-49 (avg: 23)
-- **Product size:** 5-100 heavy atoms
-
-### Filtering Criteria (Commercially Plausible)
-
-- **Allowed elements:** C, N, O, F, P, S, Cl, Br, I, B, Si, H
-- **Reactant constraints:** ≤30 heavy atoms, ≤3 rings per reactant
-- **Product constraints:** 5-100 heavy atoms
-
-## Reward Model
-
-| Result | Reward |
-|--------|--------|
-| Exact match | 1.0 |
-| Partial match | Tanimoto similarity (capped at 0.95) |
-| Invalid SMILES | 0.0 |
-
-**Similarity computation:** Morgan fingerprints (radius=2, 2048 bits) combined via bitwise OR, then Tanimoto similarity.
-
-## Installation
-
-### Requirements
-
-```
-openreward
-pydantic>=2.0
-rdkit-pypi
-```
-
-Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-### Data Preparation (Optional)
-
-To regenerate the dataset from USPTO-50k:
-```bash
-pip install PyTDC
-python prepare_data.py
-```
-
-## Usage
-
-### Run Server
-
-```bash
-python server.py
-```
-
-### Docker
-
-```bash
-docker build -t retrosynth .
-docker run -p 8080:8080 retrosynth
-```
-
-### Test Agent
-
-```bash
-export OPENAI_API_KEY=your_api_key
-python test_agent.py
-```
-
-## File Structure
-
-```
-retrosynth/
-├── retrosynth.py      # Main environment class
-├── server.py          # Server wrapper (7 lines)
-├── test_agent.py      # Agent testing script
-├── prepare_data.py    # Dataset preparation
-├── requirements.txt   # Python dependencies
-├── Dockerfile         # Container config
-└── data/
-    ├── train.json     # 1,000 training tasks
-    └── test.json      # 100 test tasks
-```
-
-## API
-
-### Environment Methods
-
-- `list_splits()` - Returns `[("train", "train"), ("test", "test")]`
-- `list_tasks(split)` - Returns task specifications (without ground truth)
-- `get_prompt()` - Returns chemistry question as `List[TextBlock]`
-
-### Tool: `submit_reactants`
-
-**Input:**
-```json
-{
-  "reactants": "CCO.CC(=O)Cl"
-}
-```
-
-**Output:**
-```json
-{
-  "reward": 1.0,
-  "finished": true,
-  "metadata": {
-    "task_id": "retro_test_0000",
-    "exact_match": true
-  }
+```bibtex
+@article{lowe2012extraction,
+  title={Extraction of chemical structures and reactions from the literature},
+  author={Lowe, Daniel Mark},
+  year={2012},
+  publisher={University of Cambridge}
 }
 ```
