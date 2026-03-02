@@ -19,7 +19,7 @@ RetroSynth does not require a sandbox. It has minimal compute requirements.
 
 ## License
 
-[MIT](https://opensource.org/license/mit).
+[CC0](https://creativecommons.org/public-domain/cc0/).
 
 ## Tasks
 
