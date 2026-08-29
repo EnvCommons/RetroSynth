@@ -95,6 +95,12 @@ class RetroSynth(Environment):
 
         self.answer = ANSWERS[self.validated.task_id]
 
+        # Graded submissions made this session. Only the first is rewarded.
+        # Malformed submissions (unparseable SMILES) are NOT counted: they
+        # never reach grading and leak no signal, so a typo should not burn
+        # the attempt.
+        self.submitted = 0
+
     @classmethod
     def list_splits(cls) -> list[Split]:
         return [
@@ -117,6 +123,19 @@ class RetroSynth(Environment):
     @tool
     async def submit_reactants(self, params: SubmitReactantsInput) -> ToolOutput:
         """Submit proposed reactants for the retrosynthesis task."""
+        if self.submitted > 0:
+            return ToolOutput(
+                blocks=[TextBlock(text="Reactants have already been submitted for this task. "
+                                       "This episode is over and no further grading or reward is given.")],
+                metadata={
+                    "task_id": self.validated.task_id,
+                    "already_submitted": True,
+                    "submission_count": self.submitted,
+                },
+                reward=0.0,
+                finished=True,
+            )
+
         gt_reactants_str = self.answer["reactant_smiles"]
 
         # Parse and validate submitted reactants
@@ -155,6 +174,7 @@ class RetroSynth(Environment):
                 f"Your reactants: {params.reactants}\n\n"
                 f"Reward: 1.0"
             )
+            self.submitted += 1
             return ToolOutput(
                 blocks=[TextBlock(text=feedback)],
                 metadata={
@@ -177,6 +197,7 @@ class RetroSynth(Environment):
             f"Fingerprint similarity reward: {reward:.4f}\n\n"
             f"Reward: {reward:.4f}"
         )
+        self.submitted += 1
         return ToolOutput(
             blocks=[TextBlock(text=feedback)],
             metadata={
