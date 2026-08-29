@@ -18,6 +18,11 @@ from pydantic import BaseModel, Field
 from rdkit import Chem
 from rdkit.Chem import AllChem, DataStructs
 
+# Reward for a submission made after the task has already been graded. Negative
+# so repeat submissions are actively discouraged, not merely left unscored.
+REPEAT_SUBMISSION_PENALTY = -0.1
+
+
 from openreward.environments import (
     Environment,
     JSONObject,
@@ -126,13 +131,13 @@ class RetroSynth(Environment):
         if self.submitted > 0:
             return ToolOutput(
                 blocks=[TextBlock(text="Reactants have already been submitted for this task. "
-                                       "This episode is over and no further grading or reward is given.")],
+                                       "This episode is over: the submission is not re-graded, and repeat submissions are penalised (reward -0.1).")],
                 metadata={
                     "task_id": self.validated.task_id,
                     "already_submitted": True,
                     "submission_count": self.submitted,
                 },
-                reward=0.0,
+                reward=REPEAT_SUBMISSION_PENALTY,
                 finished=True,
             )
 
