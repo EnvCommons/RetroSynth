@@ -101,9 +101,9 @@ class RetroSynth(Environment):
         self.answer = ANSWERS[self.validated.task_id]
 
         # Graded submissions made this session. Only the first is rewarded.
-        # Malformed submissions (unparseable SMILES) are NOT counted: they
-        # never reach grading and leak no signal, so a typo should not burn
-        # the attempt.
+        # Malformed submissions (unparseable SMILES) are NOT counted and do not
+        # end the episode: they never reach grading and leak no signal, so a
+        # typo should not burn the attempt.
         self.submitted = 0
 
     @classmethod
@@ -197,8 +197,7 @@ class RetroSynth(Environment):
 
         feedback = (
             f"Submission received.\n\n"
-            f"Your reactants (canonical): {'.'.join(submitted_sorted)}\n"
-            f"Ground truth reactants: {'.'.join(gt_canonical)}\n\n"
+            f"Your reactants (canonical): {'.'.join(submitted_sorted)}\n\n"
             f"Fingerprint similarity reward: {reward:.4f}\n\n"
             f"Reward: {reward:.4f}"
         )
@@ -210,7 +209,6 @@ class RetroSynth(Environment):
                 "target_smiles": self.validated.target_smiles,
                 "submitted": params.reactants,
                 "submitted_canonical": submitted_sorted,
-                "gt_canonical": gt_canonical,
                 "exact_match": False,
                 "tanimoto_similarity": reward,
             },
@@ -256,7 +254,7 @@ class RetroSynth(Environment):
             f"Invalid submission.\n\n"
             f"Reason: {reason}\n\n"
             f"Your submission: {submitted}\n\n"
-            f"Reward: 0.0"
+            f"Reward: 0.0. This submission was not graded; submit corrected reactants."
         )
         return ToolOutput(
             blocks=[TextBlock(text=feedback)],
@@ -268,5 +266,5 @@ class RetroSynth(Environment):
                 "reason": reason,
             },
             reward=0.0,
-            finished=True,
+            finished=False,
         )
