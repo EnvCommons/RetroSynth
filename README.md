@@ -37,7 +37,7 @@ This is a sparse, verifiable reward environment. The agent calls `submit_reactan
 
 - **Exact match**: Reward **1.0** if the canonical SMILES of submitted reactants exactly match the ground truth.
 - **Partial match**: Reward is the Tanimoto similarity (Morgan fingerprints, radius 2, 2048 bits) between the combined fingerprints of submitted and ground truth reactants, capped at **0.95**.
-- **Invalid SMILES**: Reward **0.0**.
+- **Invalid SMILES** (empty, unparseable or unsanitizable): Reward **0.0**, not graded; the episode stays open so the agent can resubmit.
 
 We do not use LLM graders for this task.
 
@@ -49,11 +49,11 @@ Tasks are derived from the [USPTO-50k](https://tdcommons.ai/generation_tasks/ret
 
 Agents are given a single tool:
 
-- `submit_reactants`: Submit proposed reactants as dot-separated SMILES (e.g., `CCO.CC(=O)Cl`). Returns the reward based on fingerprint similarity to ground truth. This tool can only be called once per task.
+- `submit_reactants`: Submit proposed reactants as dot-separated SMILES (e.g., `CCO.CC(=O)Cl`). Returns the reward based on fingerprint similarity to ground truth. Only one submission is graded per task; an invalid SMILES submission is not graded and can be resubmitted.
 
 ## Time Horizon
 
-RetroSynth is a single-turn environment. The agent receives a target molecule and submits one set of proposed reactants. Each task requires exactly one tool call.
+RetroSynth is a single-turn environment. The agent receives a target molecule and submits one set of proposed reactants. Each task requires one tool call, plus a resubmission if the first contains invalid SMILES.
 
 ## Environment Difficulty
 
