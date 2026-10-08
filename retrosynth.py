@@ -17,6 +17,7 @@ from typing import List
 from pydantic import BaseModel, Field
 from rdkit import Chem
 from rdkit.Chem import AllChem, DataStructs
+from rdkit.Chem.MolStandardize import rdMolStandardize
 
 # Reward for a submission made after the task has already been graded. Negative
 # so repeat submissions are actively discouraged, not merely left unscored.
@@ -61,6 +62,13 @@ ANSWERS = {
 }
 
 print(f"Loaded {len(ANSWERS)} RetroSynth tasks")
+
+_UNCHARGER = rdMolStandardize.Uncharger()
+
+
+def _identity_key(mol) -> str:
+    """Canonical SMILES ignoring stereochemistry and charge state."""
+    return Chem.MolToSmiles(_UNCHARGER.uncharge(Chem.Mol(mol)), isomericSmiles=False)
 
 
 class RetroSynthTaskSpec(BaseModel):
@@ -189,6 +197,33 @@ class RetroSynth(Environment):
                     "exact_match": True,
                 },
                 reward=1.0,
+                finished=True,
+            )
+
+        # The product shares most of its fingerprint bits with its own reactants,
+        # so submitting the target itself (or a stereo/charge variant of it) as a
+        # "reactant" would score well on similarity without proposing any reaction.
+        target_key = _identity_key(Chem.MolFromSmiles(self.validated.target_smiles))
+        if any(_identity_key(m) == target_key for m in submitted_mols):
+            feedback = (
+                f"Submission received.\n\n"
+                f"Your reactants (canonical): {'.'.join(submitted_sorted)}\n\n"
+                f"One of the submitted reactants is the target molecule itself, which "
+                f"is not a synthetic step.\n\n"
+                f"Reward: 0.0"
+            )
+            self.submitted += 1
+            return ToolOutput(
+                blocks=[TextBlock(text=feedback)],
+                metadata={
+                    "task_id": self.validated.task_id,
+                    "target_smiles": self.validated.target_smiles,
+                    "submitted": params.reactants,
+                    "submitted_canonical": submitted_sorted,
+                    "exact_match": False,
+                    "contains_target": True,
+                },
+                reward=0.0,
                 finished=True,
             )
 
