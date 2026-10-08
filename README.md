@@ -36,7 +36,8 @@ Tasks are filtered from [USPTO-50k](https://tdcommons.ai/generation_tasks/retros
 This is a sparse, verifiable reward environment. The agent calls `submit_reactants` once with proposed reactants, and the reward is computed as follows:
 
 - **Exact match**: Reward **1.0** if the canonical SMILES of submitted reactants exactly match the ground truth.
-- **Partial match**: Reward is the Tanimoto similarity (Morgan fingerprints, radius 2, 2048 bits) between the combined fingerprints of submitted and ground truth reactants, capped at **0.95**.
+- **Target as a reactant**: Reward **0.0** if any submitted reactant is the target molecule itself (compared ignoring stereochemistry and charge state), since that proposes no reaction.
+- **Partial match**: Otherwise, reward is the Tanimoto similarity (Morgan fingerprints, radius 2, 2048 bits) between the combined fingerprints of submitted and ground truth reactants, capped at **0.95**.
 - **Invalid SMILES** (empty, unparseable or unsanitizable): Reward **0.0**, not graded; the episode stays open so the agent can resubmit.
 
 We do not use LLM graders for this task.
