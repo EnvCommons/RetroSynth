@@ -19,11 +19,11 @@ RetroSynth does not require a sandbox. It has minimal compute requirements.
 
 ## License
 
-[CC0](https://creativecommons.org/public-domain/cc0/).
+[MIT](https://opensource.org/licenses/MIT). The underlying USPTO reaction data (Lowe, 2012) is released under CC0.
 
 ## Tasks
 
-There are two splits: train (1,000 tasks) and test (100 tasks), totaling 1,100 tasks. Each task presents a target molecule SMILES string and asks the agent to propose the reactants as dot-separated SMILES (e.g., `CCO.CC(=O)Cl`).
+There are 1,000 tasks in the `train` split and 100 in `test`. Each task presents a target molecule SMILES string and asks the agent to propose the reactants as dot-separated SMILES (e.g., `CCO.CC(=O)Cl`).
 
 Tasks are filtered from [USPTO-50k](https://tdcommons.ai/generation_tasks/retrosyn/) for commercial plausibility:
 - Allowed elements: C, N, O, F, P, S, Cl, Br, I, B, Si, H
@@ -39,6 +39,7 @@ This is a sparse, verifiable reward environment. The agent calls `submit_reactan
 - **Target as a reactant**: Reward **0.0** if any submitted reactant is the target molecule itself (compared ignoring stereochemistry and charge state), since that proposes no reaction.
 - **Partial match**: Otherwise, reward is the Tanimoto similarity (Morgan fingerprints, radius 2, 2048 bits) between the combined fingerprints of submitted and ground truth reactants, capped at **0.95**.
 - **Invalid SMILES** (empty, unparseable or unsanitizable): Reward **0.0**, not graded; the episode stays open so the agent can resubmit.
+- **Repeat submission**: any `submit_reactants` call after the first graded one returns **-0.1**.
 
 We do not use LLM graders for this task.
 
@@ -58,11 +59,11 @@ RetroSynth is a single-turn environment. The agent receives a target molecule an
 
 ## Environment Difficulty
 
-Task difficulty varies based on molecular complexity. Products range from 8 to 49 heavy atoms, with larger molecules typically requiring more sophisticated retrosynthetic reasoning. Tasks include both single-reactant transformations (functional group interconversions, ~25%) and multi-reactant reactions (coupling, amide formation, etc., ~75%).
+Task difficulty varies based on molecular complexity. Products range from 8 to 49 heavy atoms, with larger molecules typically requiring more sophisticated retrosynthetic reasoning. Across both splits, 274 tasks are single-reactant reactions, 823 have two reactants and 3 have three.
 
 ## Other Environment Requirements
 
-There are no further environment requirements; RetroSynth works out of the box with the OpenReward endpoint.
+There are no further environment requirements; RetroSynth needs no secrets or external API keys.
 
 ## Safety
 
@@ -83,10 +84,22 @@ However, this is a dual-use domain as capabilities learnt in this environment co
 ```
 
 ```bibtex
-@article{lowe2012extraction,
+@phdthesis{lowe2012extraction,
   title={Extraction of chemical structures and reactions from the literature},
   author={Lowe, Daniel Mark},
   year={2012},
-  publisher={University of Cambridge}
+  school={University of Cambridge},
+  doi={10.17863/CAM.16293}
+}
+
+@article{schneider2016whats,
+  title={What's What: The (Nearly) Definitive Guide to Reaction Role Assignment},
+  author={Schneider, Nadine and Stiefl, Nikolaus and Landrum, Gregory A.},
+  journal={Journal of Chemical Information and Modeling},
+  volume={56},
+  number={12},
+  pages={2336--2346},
+  year={2016},
+  doi={10.1021/acs.jcim.6b00564}
 }
 ```
