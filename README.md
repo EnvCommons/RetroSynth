@@ -74,16 +74,6 @@ However, this is a dual-use domain as capabilities learnt in this environment co
 ## Citations
 
 ```bibtex
-@dataset{GRRetroSynth,
-  author    = {General Reasoning Inc. Team},
-  title     = {RetroSynth},
-  year      = {2026},
-  publisher = {OpenReward},
-  url       = {https://openreward.ai/GeneralReasoning/RetroSynth}
-}
-```
-
-```bibtex
 @phdthesis{lowe2012extraction,
   title={Extraction of chemical structures and reactions from the literature},
   author={Lowe, Daniel Mark},
